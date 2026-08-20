@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, X, Check, TrendingDown, Copy, ChevronDown, ChevronUp, Percent, Banknote } from "lucide-react";
+import { Plus, Trash2, X, Check, TrendingDown, Copy, ChevronDown, ChevronUp, Percent, Banknote, Pencil } from "lucide-react";
 
 const STORAGE_KEY = "debts-v1";
 
@@ -158,6 +158,36 @@ export default function DebtTracker() {
     setActionFor(null);
     setAmount("");
     setNote("");
+  };
+
+  const handleEditEntry = (entry) => {
+    const nextAmount = parseFloat(window.prompt("Сума, грн", String(entry.amount)));
+    if (!nextAmount || nextAmount <= 0) return;
+    const nextNote = window.prompt("Нотатка", entry.note || "");
+    if (nextNote === null) return;
+
+    const sign = entryType(entry) === "interest" ? 1 : -1;
+    const debts = data.debts.map((debt) =>
+      debt.id === entry.debtId
+        ? { ...debt, balance: Math.max(0, debt.balance - sign * entry.amount + sign * nextAmount) }
+        : debt
+    );
+    const payments = data.payments.map((payment) =>
+      payment.id === entry.id ? { ...payment, amount: nextAmount, note: nextNote.trim() } : payment
+    );
+    update({ ...data, debts, payments });
+  };
+
+  const handleDeleteEntry = (entry) => {
+    if (!window.confirm("Видалити цей запис?")) return;
+
+    const sign = entryType(entry) === "interest" ? 1 : -1;
+    const debts = data.debts.map((debt) =>
+      debt.id === entry.debtId
+        ? { ...debt, balance: Math.max(0, debt.balance - sign * entry.amount) }
+        : debt
+    );
+    update({ ...data, debts, payments: data.payments.filter((payment) => payment.id !== entry.id) });
   };
 
   const exportText = () => {
@@ -452,8 +482,10 @@ export default function DebtTracker() {
                             {isInterest ? <Percent size={10} style={{ color: "#C1666B" }} /> : <Banknote size={10} style={{ color: "#7FA37F" }} />}
                             {p.date}{p.note ? ` · ${p.note}` : ""}
                           </span>
-                          <span style={{ color: isInterest ? "#C1666B" : "#7FA37F" }}>
+                          <span className="flex items-center gap-1.5" style={{ color: isInterest ? "#C1666B" : "#7FA37F" }}>
                             {isInterest ? "+" : "−"}{fmt(p.amount)} грн
+                            <button onClick={() => handleEditEntry(p)} className="p-1 opacity-70 hover:opacity-100" style={{ color: "#8A9BA8" }} aria-label="Редагувати запис"><Pencil size={12} /></button>
+                            <button onClick={() => handleDeleteEntry(p)} className="p-1 opacity-70 hover:opacity-100" style={{ color: "#C1666B" }} aria-label="Видалити запис"><Trash2 size={12} /></button>
                           </span>
                         </div>
                       );
